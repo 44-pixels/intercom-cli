@@ -19,19 +19,6 @@ function buildMcpServer(intercom: IntercomClient): McpServer {
   return server;
 }
 
-function allowedHostsFor(config: Config): string[] | undefined {
-  try {
-    const url = new URL(config.publicUrl);
-    const hostname = url.hostname.toLowerCase();
-    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") {
-      return ["localhost", "127.0.0.1", "[::1]"];
-    }
-    return [hostname];
-  } catch {
-    return undefined;
-  }
-}
-
 function printStartupBanner(config: Config, prmUrl: string): void {
   const lines = [
     `${PKG_NAME} v${PKG_VERSION}`,
@@ -47,7 +34,9 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const prmUrl = protectedResourceMetadataUrl(config);
 
-  const app = createMcpExpressApp({ host: "0.0.0.0", allowedHosts: allowedHostsFor(config) });
+  // Bind on all interfaces; intentionally no Host header allow-list — auth is
+  // enforced by Bearer token validation, not by hostname.
+  const app = createMcpExpressApp({ host: "0.0.0.0" });
 
   // Public discovery endpoints — no auth.
   app.use(createMetadataRouter(config));
